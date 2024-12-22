@@ -21,6 +21,10 @@ class _ToDoViewState extends State<ToDoView>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
+  // booleans
+  bool isDetailedOrdeleteButtonEnable = true;
+  bool isDeleteButtonEnabled = false;
+
   //View Life Cycle
   @override
   void initState() {
@@ -51,12 +55,44 @@ class _ToDoViewState extends State<ToDoView>
       appBar: CommonUIComponents.commonAppBar(
           context, 'To Do List', AppColors.primary, AppColors.textColor, [
         IconButton(
-            onPressed: _toggleAnimation,
+            onPressed: () {},
             icon: Icon(
-              Icons.edit,
+              Icons.add,
               color: AppColors.textColor,
-              size: 20,
-            ))
+            )),
+        Container(
+          margin: EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: (!isDetailedOrdeleteButtonEnable) ? Colors.white.withOpacity(0.15) : Colors.transparent,
+            shape: BoxShape.circle
+          ),
+          child: IconButton(
+              onPressed: () {
+                setState(() {
+                  isDeleteButtonEnabled = false;
+                  isDetailedOrdeleteButtonEnable =
+                      !isDetailedOrdeleteButtonEnable;
+                });
+              },
+              icon: Icon(Icons.edit ,
+                color:  AppColors.textColor,
+                size: 20,
+              )),
+        ),
+        Container(
+          margin: EdgeInsets.all(8),
+           decoration: BoxDecoration(
+            color: (isDeleteButtonEnabled) ? Colors.white.withOpacity(0.15) : Colors.transparent,
+            shape: BoxShape.circle
+          ),
+          child: IconButton(
+              onPressed: _toggleAnimation,
+              icon: Icon(
+                Icons.delete,
+                color: AppColors.textColor,
+                size: 20,
+              )),
+        )
       ]),
       backgroundColor: AppColors.secondary,
       body: categoryListView(),
@@ -82,9 +118,9 @@ class _ToDoViewState extends State<ToDoView>
             return _buildLoading();
           } else if (state is ToDoCategoryBlocLoadingState) {
             return _buildLoading();
-          }else if(state is ToDoCategoryBlocLoadedState){
+          } else if (state is ToDoCategoryBlocLoadedState) {
             return CategoryList(state.toDoCategoryModel);
-          }else {
+          } else {
             return SizedBox();
           }
         },
@@ -95,7 +131,7 @@ class _ToDoViewState extends State<ToDoView>
 
   Widget CategoryList(List<ToDoCategoryModel> categories) {
     return ListView.builder(
-        itemCount: 10,
+        itemCount: categories.length,
         shrinkWrap: true,
         scrollDirection: Axis.vertical,
         itemBuilder: (context, categoryIndex) {
@@ -103,7 +139,8 @@ class _ToDoViewState extends State<ToDoView>
         });
   }
 
-  Widget categoryItemCell(List<ToDoCategoryModel> categories, int categoryIndex) {
+  Widget categoryItemCell(
+      List<ToDoCategoryModel> categories, int categoryIndex) {
     return Container(
       height: 50,
       padding: const EdgeInsets.only(left: 8),
@@ -135,10 +172,19 @@ class _ToDoViewState extends State<ToDoView>
                 onTap: () {
                   print('Next and Close Button Tapped');
                 },
-                child: CustomPaint(
-                  size: const Size(50, 50),
-                  painter: ChevronToCrossPainter(_animation.value),
-                ),
+                child: isDetailedOrdeleteButtonEnable
+                    ? CustomPaint(
+                        size: const Size(50, 50),
+                        painter: ChevronToCrossPainter(_animation.value),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Icon(
+                          Icons.edit,
+                          color: AppColors.icon,
+                          size: 20,
+                        ),
+                      ),
               );
             },
           ),
@@ -147,14 +193,27 @@ class _ToDoViewState extends State<ToDoView>
     );
   }
 
-  Widget _buildLoading() => Center(child: CircularProgressIndicator(color: AppColors.textColor,semanticsLabel: 'Loading...',));
+  Widget _buildLoading() => Center(
+          child: CircularProgressIndicator(
+        color: AppColors.textColor,
+        semanticsLabel: 'Loading...',
+      ));
 
 // methods
   void _toggleAnimation() {
     if (_animationController.status == AnimationStatus.completed) {
+      if(isDetailedOrdeleteButtonEnable == false){
+        _animationController.reset();
+        _animationController.forward();
+      }else{
       _animationController.reverse();
+      }
     } else {
       _animationController.forward();
     }
+    setState(() {
+      isDetailedOrdeleteButtonEnable = true;
+      isDeleteButtonEnabled = !isDeleteButtonEnabled;
+    });
   }
 }
