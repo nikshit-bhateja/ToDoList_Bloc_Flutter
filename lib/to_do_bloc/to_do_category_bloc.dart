@@ -8,34 +8,44 @@ part 'to_do_category_bloc_state.dart';
 
 class ToDoCategoryBloc
     extends Bloc<ToDoCategoryBlocEvent, ToDoCategoryBlocState> {
+  List<ToDoCategoryModel> toDoCategoryModel = [];
+
   ToDoCategoryBloc() : super(ToDoCategoryBlocInitialState()) {
-    on<GetToDoCategoryList>((event, emit)  {
+    on<GetToDoCategoryList>((event, emit) {
       // try {
-        emit(ToDoCategoryBlocLoadingState());
-        final modelData = addData();
-        emit(ToDoCategoryBlocLoadedState(toDoCategoryModel: modelData));
-        if (modelData == null) {
-          emit(ToDoCategoryBlocErrorState(
-              errorMessage: 'No Data Added at initial state'));
-        }
-      // } on Error {
-      //   debugPrint("Error Occured $ErrorDescription");
-      // }
+      emit(ToDoCategoryBlocLoadingState());
+      final modelData = toDoCategoryModel;
+      emit(ToDoCategoryBlocLoadedState(toDoCategoryModel: modelData));
+      if (modelData.isEmpty) {
+        print('ToDoCategoryBlocErrorState emitted');
+        emit(ToDoCategoryBlocErrorState(errorMessage: 'No Data Found'));
+      }
     });
   }
 
-  addData() {
-    List<ToDoCategoryModel> toDoCategoryModel = [];
-    for (var category = 1; category < 21; category++) {
-      var data = ToDoCategoryModel(
-          id: category,
-          created_at: DateTime.now(),
-          deleted_at: DateTime.now(),
-          title: 'Category $category',
-          items: []);
-
-      toDoCategoryModel.insert(category-1, data);
+  addData(String title) {
+    // for (var category = 1; category < 21; category++) {
+    var data = ToDoCategoryModel(
+        id: toDoCategoryModel.length + 1,
+        created_at: DateTime.now(),
+        deleted_at: DateTime.now(),
+        title: title,
+        items: []);
+    if (toDoCategoryModel.length == 0) {
+      toDoCategoryModel.insert(0, data);
+    } else {
+      toDoCategoryModel.insert(toDoCategoryModel.length, data);
     }
     return toDoCategoryModel;
+  }
+
+  deleteCategory(int categoryIndex) {
+    if (toDoCategoryModel.isNotEmpty) {
+      toDoCategoryModel.removeAt(categoryIndex);
+    }
+  }
+
+  updateCategoryName(int categoryIndex, String updatedValue) {
+    toDoCategoryModel[categoryIndex].title = updatedValue;
   }
 }

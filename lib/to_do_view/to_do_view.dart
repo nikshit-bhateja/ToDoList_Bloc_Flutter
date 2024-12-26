@@ -25,6 +25,20 @@ class _ToDoViewState extends State<ToDoView>
   bool isDetailedOrdeleteButtonEnable = true;
   bool isDeleteButtonEnabled = false;
 
+  // Text Fields
+  TextEditingController categoryNameController = TextEditingController();
+
+  // custom methods
+  deleteCategory(int categoryIndex) {
+    toDoCategoryBloc.deleteCategory(categoryIndex);
+    toDoCategoryBloc.add(GetToDoCategoryList());
+    if (toDoCategoryBloc.toDoCategoryModel.isEmpty) {
+      setState(() {
+        isDeleteButtonEnabled = false;
+      });
+    }
+  }
+
   //View Life Cycle
   @override
   void initState() {
@@ -55,7 +69,14 @@ class _ToDoViewState extends State<ToDoView>
       appBar: CommonUIComponents.commonAppBar(
           context, 'To Do List', AppColors.primary, AppColors.textColor, [
         IconButton(
-            onPressed: () {},
+            onPressed: () {
+              setState(() {
+              isDetailedOrdeleteButtonEnable = true;
+              isDeleteButtonEnabled = false;  
+              categoryNameController.text = '';
+              });
+              showAddCategoryWithTitle(0);
+            },
             icon: Icon(
               Icons.add,
               color: AppColors.textColor,
@@ -63,9 +84,10 @@ class _ToDoViewState extends State<ToDoView>
         Container(
           margin: EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: (!isDetailedOrdeleteButtonEnable) ? Colors.white.withOpacity(0.15) : Colors.transparent,
-            shape: BoxShape.circle
-          ),
+              color: (!isDetailedOrdeleteButtonEnable)
+                  ? Colors.white.withOpacity(0.15)
+                  : Colors.transparent,
+              shape: BoxShape.circle),
           child: IconButton(
               onPressed: () {
                 setState(() {
@@ -74,17 +96,20 @@ class _ToDoViewState extends State<ToDoView>
                       !isDetailedOrdeleteButtonEnable;
                 });
               },
-              icon: Icon(Icons.edit ,
-                color:  AppColors.textColor,
+              icon: Icon(
+                Icons.edit,
+                color: AppColors.textColor,
                 size: 20,
               )),
         ),
         Container(
           margin: EdgeInsets.all(8),
-           decoration: BoxDecoration(
-            color: (isDeleteButtonEnabled) ? Colors.white.withOpacity(0.15) : Colors.transparent,
-            shape: BoxShape.circle
-          ),
+          decoration: BoxDecoration(
+              color: (toDoCategoryBloc.toDoCategoryModel.isNotEmpty &&
+                      isDeleteButtonEnabled)
+                  ? Colors.white.withOpacity(0.15)
+                  : Colors.transparent,
+              shape: BoxShape.circle),
           child: IconButton(
               onPressed: _toggleAnimation,
               icon: Icon(
@@ -106,15 +131,13 @@ class _ToDoViewState extends State<ToDoView>
       child: BlocListener<ToDoCategoryBloc, ToDoCategoryBlocState>(
           listener: (context, state) {
         if (state is ToDoCategoryBlocErrorState) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage!),
-            ),
-          );
+          errorWidget(state.errorMessage.toString());
         }
       }, child: BlocBuilder<ToDoCategoryBloc, ToDoCategoryBlocState>(
         builder: (context, state) {
-          if (state is ToDoCategoryBlocInitialState) {
+          if (state is ToDoCategoryBlocErrorState) {
+            return errorWidget(state.errorMessage.toString());
+          } else if (state is ToDoCategoryBlocInitialState) {
             return _buildLoading();
           } else if (state is ToDoCategoryBlocLoadingState) {
             return _buildLoading();
@@ -127,6 +150,34 @@ class _ToDoViewState extends State<ToDoView>
       )),
     );
     // );
+  }
+
+  Widget errorWidget(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.broken_image_outlined,
+            color: AppColors.textColor,
+          ),
+          Text(
+            message,
+            style: TextStyle(
+                color: AppColors.textDark,
+                fontSize: 20,
+                fontWeight: FontWeight.w700),
+          ),
+          Text(
+            'tap + button to add category',
+            style: TextStyle(
+                color: AppColors.textDark,
+                fontSize: 20,
+                fontWeight: FontWeight.w700),
+          )
+        ],
+      ),
+    );
   }
 
   Widget CategoryList(List<ToDoCategoryModel> categories) {
@@ -170,7 +221,15 @@ class _ToDoViewState extends State<ToDoView>
             builder: (context, child) {
               return InkWell(
                 onTap: () {
-                  print('Next and Close Button Tapped');
+                  if(!isDetailedOrdeleteButtonEnable){
+                    setState(() {
+                      categoryNameController.text = toDoCategoryBloc.toDoCategoryModel[categoryIndex].title.toString();  
+                    });
+                    
+                  }
+                  isDeleteButtonEnabled
+                      ? showDeleteCategory(categoryIndex)
+                      : (!isDetailedOrdeleteButtonEnable) ? showAddCategoryWithTitle(categoryIndex) :print('Navigation check occured');
                 },
                 child: isDetailedOrdeleteButtonEnable
                     ? CustomPaint(
@@ -202,11 +261,11 @@ class _ToDoViewState extends State<ToDoView>
 // methods
   void _toggleAnimation() {
     if (_animationController.status == AnimationStatus.completed) {
-      if(isDetailedOrdeleteButtonEnable == false){
+      if (isDetailedOrdeleteButtonEnable == false) {
         _animationController.reset();
         _animationController.forward();
-      }else{
-      _animationController.reverse();
+      } else {
+        _animationController.reverse();
       }
     } else {
       _animationController.forward();
@@ -215,5 +274,106 @@ class _ToDoViewState extends State<ToDoView>
       isDetailedOrdeleteButtonEnable = true;
       isDeleteButtonEnabled = !isDeleteButtonEnabled;
     });
+  }
+
+  void showAddCategoryWithTitle(int categoryIndex) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              'Enter category name',
+              style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700),
+            ),
+            content: TextFormField(
+              controller: categoryNameController,
+              keyboardType: TextInputType.name,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (!isDetailedOrdeleteButtonEnable) {
+                    toDoCategoryBloc.updateCategoryName(categoryIndex, categoryNameController.text);
+                    toDoCategoryBloc.add(GetToDoCategoryList());
+                  } else {
+                    toDoCategoryBloc.addData(categoryNameController.text);
+                    toDoCategoryBloc.add(GetToDoCategoryList());
+                    
+                  }
+                  Navigator.pop(context);
+                    setState(() {
+                      categoryNameController.text = '';
+                    });
+                },
+                child: Text(
+                  'Save',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
+                ),
+              )
+            ],
+          );
+        });
+  }
+
+  void showDeleteCategory(int categoryIndex) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              'Are you surely want to delete \"${toDoCategoryBloc.toDoCategoryModel[categoryIndex].title.toString()}\"',
+              style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  toDoCategoryBloc.deleteCategory(categoryIndex);
+                  toDoCategoryBloc.add(GetToDoCategoryList());
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Delete',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
+                ),
+              )
+            ],
+          );
+        });
   }
 }
